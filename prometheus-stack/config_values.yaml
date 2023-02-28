@@ -1,0 +1,36 @@
+grafana:
+  additionalDataSources:
+    - name: loki
+      type: loki
+      uid: my-loki
+      access: proxy
+      orgId: 1
+      url: http://loki:3100
+      basicAuth: false
+      isDefault: false
+      version: 1
+      editable: true
+      jsonData:
+        derivedFields:
+        - datasourceUid: my-jaeger
+          matcherRegex: ((\d+|[a-z]+)(\d+|[a-z]+)(\d+|[a-z]+)(\d+|[a-z]+)(\d+|[a-z]+)(\d+|[a-z]+)(\d+|[a-z]+)(\d+|[a-z]+)(\d+|[a-z]+)(\d+|[a-z]+)(\d+|[a-z]+))
+          url: '$${__value.raw}'
+          name: TraceID
+    - name: jaeger
+      type: jaeger
+      uid: my-jaeger
+      access: browser
+      url: http://jaeger:16686
+      isDefault: false
+      version: 1
+      editable: true
+      basicAuth: false
+    - name: tempo
+      type: tempo
+      uid: dev-tempo
+      access: browser
+      url: http://tempo:16686
+      isDefault: false
+      version: 1
+      editable: true
+      basicAuth: false

@@ -1,0 +1,163 @@
+#https://github.com/open-telemetry/opentelemetry-helm-charts/blob/main/charts/opentelemetry-collector/values.yaml
+# agentCollector:
+#   enabled: false
+# standaloneCollector:
+#   enabled: true
+#mode: daemonset
+mode: deployment
+presets:
+  logsCollection:
+    enabled: false
+    includeCollectorLogs: false
+
+configMap:
+  create: true
+
+resources:
+  limits:
+    cpu: 256m
+    memory: 512Mi
+
+config:
+  receivers:
+    jaeger:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:14250
+        thrift_http:
+          endpoint: 0.0.0.0:14268
+        thrift_compact:
+          endpoint: 0.0.0.0:6831
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+    #prometheus:
+      #config:
+        #scrape_configs:
+          #- job_name: opentelemetry-collector
+            #scrape_interval: 10s
+            #static_configs:
+              #- targets:
+                  #- 0.0.0.0:8888
+    zipkin:
+      endpoint: 0.0.0.0:9411
+  extensions:
+    health_check: {}
+    memory_ballast: {}
+    pprof:
+      endpoint: 0.0.0.0:55678
+    zpages:
+      endpoint: 0.0.0.0:55679
+  service:
+    telemetry:
+      metrics:
+        address: 0.0.0.0:8888
+      logs:
+          level: "DEBUG"
+          development: true
+          encoding: "json"
+    extensions: [pprof, zpages, health_check]
+      
+    pipelines:
+      logs:
+        exporters:
+          - loki
+        processors:
+          - memory_limiter
+          - batch
+        receivers:
+          - otlp
+      metrics:
+        exporters:
+          - prometheus
+        processors:
+          - memory_limiter
+          - batch
+        receivers:
+          - otlp          
+      traces:
+        exporters:
+          - otlphttp
+          - jaeger
+        processors:
+          - memory_limiter
+          - batch
+        receivers:
+          - otlp
+          - jaeger
+          - zipkin
+  processors:
+    batch: {}
+    memory_limiter:
+          # 80% of maximum memory up to 2G
+          limit_mib: 400
+          # 25% of limit up to 2G
+          spike_limit_mib: 100
+          check_interval: 5s 
+  exporters:
+    prometheus:
+      endpoint: "0.0.0.0:9100"
+      send_timestamps: true
+    loki:
+      endpoint: "http://logging-loki-distributed-gateway.observability:80"
+    otlphttp:
+      endpoint: "tracing-tempo-distributed-ingester.observability.svc.cluster.local:3100"
+        # headers:
+        #  "api-key": ""
+    jaeger:
+      endpoint: "jaeger-collector.tracing:14250"
+      tls: 
+        insecure: "true"
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  annotations: 
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  ingressClassName: nginx
+  hosts:
+  - host: "collector.dev.mycompany.dev"
+    paths:
+      - path: /
+        pathType: Prefix
+        port: 4317
+      - path: /jaeger
+        pathType: Prefix
+        port: 14268
+  - host: "collector-jaeger.dev.mycompany.dev"
+    paths:
+      - path: /
+        pathType: Prefix
+        port: 14268
+  tls:
+   - secretName: collector-tls
+     hosts:
+       - "collector.dev.mycompany.dev"
+       - "collector-jaeger.dev.mycompany.dev"
+
+ports:
+  zpages:
+   enabled: true
+   containerPort: 55679
+   servicePort: 55679
+   protocol: TCP
+  jaeger-compact:
+    enabled: true
+  jaeger-thrift:
+    enabled: true
+  jaeger-grpc:
+    enabled: true
+  otlp:
+    enabled: true
+  otlp-http:
+    enabled: true
+  prom-exporter:
+    enabled: true
+    containerPort: 8889
+    servicePort: 8889
+    protocol: TCP

@@ -1,0 +1,5 @@
+# https://github.com/jaegertracing/helm-charts/tree/main/charts/jaeger-operator
+apiVersion: jaegertracing.io/v1
+kind: Jaeger
+metadata:
+  name: simplest

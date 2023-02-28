@@ -1,0 +1,5 @@
+kubeconfig = "/home/passos/.kube/config"
+url = "mycompany.dev"
+metrics_url = "0.0.0.0:9100"
+tracing_url = "tracing-tempo-distributed-ingester.observability.svc.cluster.local:3100"
+logging_url = "http://logging-loki-distributed-gateway.observability:80"
